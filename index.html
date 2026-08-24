@@ -7,113 +7,192 @@
 <link rel="manifest" href="manifest.json">
 <style>
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; user-select:none; }
-  html, body { height:100%; overflow:hidden; background:#050810; font-family: 'Segoe UI', Tahoma, Arial, sans-serif; }
-  #wrap {
-    width:100%; height:100%;
-    display:flex; flex-direction:column;
-    background:#050810;
+  html, body { height:100%; overflow:hidden; background:#0f0d17; font-family: 'Roboto', 'Segoe UI', Tahoma, Arial, sans-serif; }
+
+  :root {
+    --m3-primary: #d0bcff;
+    --m3-primary-dark: #6750a4;
+    --m3-surface: #1d1b24;
+    --m3-surface2: #2a2734;
+    --m3-on-surface: #e8def8;
+    --m3-accent: #ffd8e4;
+    --m3-gold: #ffd84a;
   }
+
+  #wrap { width:100%; height:100%; display:flex; flex-direction:column; background:#0f0d17; }
+
   #topbar {
-    height:46px; flex-shrink:0;
-    background: linear-gradient(180deg, #1c2a4a 0%, #0a1530 100%);
-    border-bottom: 2px solid #000814;
+    height:52px; flex-shrink:0;
+    background: var(--m3-surface);
     display:flex; align-items:center; justify-content:space-between;
-    padding:0 10px; color:#eaf2ff; font-size:13px; font-weight:bold;
-    text-shadow: 1px 1px 1px rgba(0,0,0,0.6);
-    gap:8px;
+    padding:0 8px; color:var(--m3-on-surface); font-size:12px; font-weight:600;
+    gap:4px;
+    border-bottom-left-radius:20px; border-bottom-right-radius:20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+    z-index:6;
   }
-  #topbar .stats { display:flex; gap:12px; align-items:center; }
-  #topbar .coinTag { display:flex; align-items:center; gap:4px; color:#ffd84a; }
-  #pauseBtn {
-    width:32px; height:32px; border-radius:8px;
-    background: linear-gradient(180deg, #3a5aa0 0%, #1a2f66 100%);
-    border: 1px solid #000814; color:#fff; font-size:16px;
+  #topbar .stats { display:flex; gap:5px; align-items:center; flex-shrink:0; }
+  .pill {
+    background: var(--m3-surface2); border-radius:16px; padding:5px 9px;
+    display:flex; align-items:center; gap:4px; font-size:11px; white-space:nowrap;
+  }
+  .coinTag { color:var(--m3-gold); }
+  .iconBtn {
+    width:32px; height:32px; border-radius:16px; flex-shrink:0;
+    background: var(--m3-primary-dark); border:none; color:#fff; font-size:14px;
     display:flex; align-items:center; justify-content:center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.35);
   }
+  .iconBtn:active { background:#54408f; }
+
   #canvasHolder { flex:1; position:relative; overflow:hidden; }
   canvas { display:block; width:100%; height:100%; }
+
+  #joyBase {
+    position:absolute; left:20px; bottom:20px; width:104px; height:104px;
+    border-radius:50%; background:radial-gradient(circle, rgba(208,188,255,0.15), rgba(208,188,255,0.05));
+    border:2px solid rgba(208,188,255,0.4);
+    display:none; z-index:5; box-shadow: inset 0 2px 8px rgba(0,0,0,0.3);
+  }
+  #joyKnob {
+    position:absolute; left:32px; top:32px; width:40px; height:40px; border-radius:50%;
+    background: radial-gradient(circle at 35% 30%, #eaddff, #6750a4);
+    box-shadow: 0 3px 10px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.4);
+    transition: left 0.15s ease-out, top 0.15s ease-out;
+  }
+  #joyKnob.dragging { transition:none; }
+
   .overlayScreen {
     position:absolute; inset:0; display:flex; flex-direction:column;
     align-items:center; justify-content:center;
-    background: radial-gradient(ellipse at 50% 30%, rgba(30,50,100,0.85), rgba(4,8,18,0.95));
-    color:#fff; text-align:center; padding:20px; overflow-y:auto;
+    background: rgba(15,13,23,0.92);
+    color:var(--m3-on-surface); text-align:center; padding:20px; overflow-y:auto; z-index:10;
   }
-  .overlayScreen h1 { font-size:26px; margin-bottom:8px; text-shadow:0 0 12px #4fa3ff, 2px 2px 0 #000814; letter-spacing:1px; }
-  .overlayScreen p { font-size:13px; margin-bottom:14px; opacity:0.85; line-height:1.5; max-width:280px; }
+  .sheet {
+    background: var(--m3-surface); border-radius:28px; padding:26px 22px;
+    width:100%; max-width:340px; box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+  }
+  .overlayScreen h1 { font-size:22px; margin-bottom:8px; color:var(--m3-primary); letter-spacing:0.5px; font-weight:700; }
+  .overlayScreen p { font-size:13px; margin-bottom:12px; opacity:0.85; line-height:1.5; }
   .btn {
-    background: linear-gradient(180deg, #6ab4ff 0%, #1a56b8 100%);
-    border: 2px solid #001030;
-    border-radius: 10px;
-    color:#fff; font-size:15px; font-weight:bold;
-    padding:10px 26px;
-    box-shadow: 0 4px 0 #001030, inset 0 1px 0 rgba(255,255,255,0.5);
-    margin:5px;
+    background: var(--m3-primary); color:#3a2f5c; border:none; border-radius:24px;
+    font-size:14px; font-weight:700; padding:12px 26px; margin:5px; width:calc(100% - 10px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
   }
-  .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #001030; }
-  .btn.secondary {
-    background: linear-gradient(180deg, #444d66 0%, #1c2333 100%);
-  }
-  .btn.small { font-size:12px; padding:7px 14px; border-radius:8px; }
-  .btn:disabled { opacity:0.4; }
-  #hidden { display:none; }
-  .coinBadge { color:#ffd84a; font-weight:bold; }
+  .btn:active { background:#b9a3f0; }
+  .btn.secondary { background: var(--m3-surface2); color:var(--m3-on-surface); }
+  .btn.small { font-size:12px; padding:8px 14px; width:auto; border-radius:16px; }
+  .btn.gold { background: var(--m3-gold); color:#3a2a00; }
+  .btn:disabled { opacity:0.35; }
+  .coinBadge { color:var(--m3-gold); font-weight:700; }
 
-  #shopGrid {
-    display:grid; grid-template-columns: repeat(2, 1fr); gap:10px;
-    max-width:340px; width:100%; margin-bottom:14px;
+  #shopGrid { display:grid; grid-template-columns: repeat(2, 1fr); gap:10px; width:100%; margin-bottom:14px; }
+  .skinCard { background: var(--m3-surface2); border: 2px solid transparent; border-radius:20px; padding:10px 6px; display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .skinCard.selected { border-color:var(--m3-primary); box-shadow:0 0 0 3px rgba(208,188,255,0.25); }
+  .skinCard canvas { width:46px; height:60px; }
+  .skinCard .skinName { font-size:11px; font-weight:700; }
+
+  .settingsRow { display:flex; align-items:center; justify-content:space-between; width:100%; padding:10px 4px; border-bottom:1px solid rgba(255,255,255,0.08); font-size:13px; }
+  .toggle { width:46px; height:26px; border-radius:14px; background:#49454f; position:relative; }
+  .toggle.on { background: var(--m3-primary-dark); }
+  .toggle .dot { position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:#938f99; transition:left 0.15s, background 0.15s; }
+  .toggle.on .dot { left:23px; background:#eaddff; }
+  #versionTapSettings { font-size:10px; opacity:0.4; margin-top:10px; }
+  #cheatBox { display:none; margin-top:12px; padding:12px; border-radius:16px; background:rgba(255,216,74,0.08); border:1px dashed var(--m3-gold); }
+  #cheatBox p { font-size:11px; margin-bottom:8px; }
+
+  #toast {
+    position:absolute; top:66px; left:50%; transform:translateX(-50%);
+    background: var(--m3-surface2); border-radius:16px; color:var(--m3-gold);
+    padding:9px 18px; font-size:13px; font-weight:700;
+    opacity:0; transition:opacity 0.3s; z-index:8; white-space:nowrap;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.4);
   }
-  .skinCard {
-    background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
-    border: 2px solid #2a3a5c; border-radius:12px; padding:10px 6px;
-    display:flex; flex-direction:column; align-items:center; gap:6px;
+  #toast.show { opacity:1; }
+
+  #easterEgg {
+    position:absolute; inset:0; display:none; align-items:center; justify-content:center;
+    background:rgba(10,8,15,0.9); z-index:20; flex-direction:column; color:#fff; text-align:center;
   }
-  .skinCard.selected { border-color:#6ab4ff; box-shadow:0 0 12px rgba(106,180,255,0.6); }
-  .skinCard canvas { width:50px; height:64px; }
-  .skinCard .skinName { font-size:11px; font-weight:bold; }
-  .skinCard .skinPrice { font-size:11px; color:#ffd84a; }
+  #easterEgg .tux { font-size:64px; animation: fly 2.5s ease-in-out; }
+  @keyframes fly { 0%{ transform:translateX(-200px) rotate(-10deg); opacity:0;} 50%{ transform:translateX(0) rotate(5deg); opacity:1;} 100%{ transform:translateX(200px) rotate(-10deg); opacity:0;} }
 </style>
 </head>
 <body>
 <div id="wrap">
   <div id="topbar">
     <div class="stats">
-      <span id="scoreLbl">Очки: 0</span>
-      <span class="coinTag">🪙<span id="coinLbl">0</span></span>
+      <span class="pill">🏁 <span id="scoreLbl">0</span></span>
+      <span class="pill coinTag">🪙 <span id="coinLbl">0</span></span>
     </div>
     <div class="stats">
-      <span id="bestLbl">Рекорд: 0</span>
-      <button id="pauseBtn">❚❚</button>
+      <span class="pill">🏆 <span id="bestLbl">0</span></span>
+      <button class="iconBtn" id="settingsBtn">⚙</button>
+      <button class="iconBtn" id="pauseBtn">❚❚</button>
     </div>
   </div>
   <div id="canvasHolder">
     <canvas id="game"></canvas>
+    <div id="joyBase"><div id="joyKnob"></div></div>
+    <div id="toast"></div>
 
     <div id="startOverlay" class="overlayScreen">
-      <h1>RETRO RUNNER</h1>
-      <p>Человечек бежит сам.<br>Тапни по экрану, чтобы прыгнуть.<br>Собирай монетки — покупай скины в магазине.</p>
-      <p class="coinBadge">🪙 Монет: <span id="startCoinLbl">0</span></p>
-      <button class="btn" id="startBtn">Старт</button>
-      <button class="btn secondary" id="shopBtn">Магазин скинов</button>
+      <div class="sheet">
+        <h1>RETRO RUNNER</h1>
+        <p>Тапни по экрану, чтобы прыгнуть.<br>Или используй джойстик.<br>Каждые 1000 очков — бонус 100 монет!</p>
+        <p class="coinBadge">🪙 Монет: <span id="startCoinLbl">0</span></p>
+        <button class="btn" id="startBtn">Старт</button>
+        <button class="btn secondary" id="shopBtn">Магазин скинов</button>
+        <button class="btn secondary" id="settingsBtn2">Настройки</button>
+      </div>
     </div>
 
     <div id="shopOverlay" class="overlayScreen" style="display:none;">
-      <h1>Магазин</h1>
-      <p class="coinBadge">🪙 Монет: <span id="shopCoinLbl">0</span></p>
-      <div id="shopGrid"></div>
-      <button class="btn secondary" id="shopBackBtn">Назад</button>
+      <div class="sheet">
+        <h1>Магазин</h1>
+        <p class="coinBadge">🪙 Монет: <span id="shopCoinLbl">0</span></p>
+        <div id="shopGrid"></div>
+        <button class="btn secondary" id="shopBackBtn">Назад</button>
+      </div>
+    </div>
+
+    <div id="settingsOverlay" class="overlayScreen" style="display:none;">
+      <div class="sheet">
+        <h1>Настройки</h1>
+        <div class="settingsRow"><span>🎵 Музыка</span><div class="toggle" id="musicToggle"><div class="dot"></div></div></div>
+        <div class="settingsRow"><span>🔊 Звуки</span><div class="toggle" id="sfxToggle"><div class="dot"></div></div></div>
+        <div class="settingsRow"><span>🕹 Джойстик</span><div class="toggle" id="joyToggle"><div class="dot"></div></div></div>
+        <div id="versionTapSettings">v4.0 (нажми 7 раз)</div>
+        <div id="cheatBox">
+          <p>Секретные читы разблокированы</p>
+          <button class="btn gold small" id="cheatMoney">💰 +1000 монет</button>
+          <button class="btn gold small" id="cheatGod">🛡 Бессмертие: <span id="godState">выкл</span></button>
+          <button class="btn gold small" id="cheatLinux">🐧 Пасхалка</button>
+        </div>
+        <button class="btn secondary" id="settingsBackBtn" style="margin-top:14px;">Назад</button>
+      </div>
     </div>
 
     <div id="pauseOverlay" class="overlayScreen" style="display:none;">
-      <h1>Пауза</h1>
-      <button class="btn" id="resumeBtn">Продолжить</button>
-      <button class="btn secondary" id="pauseMenuBtn">В меню</button>
+      <div class="sheet">
+        <h1>Пауза</h1>
+        <button class="btn" id="resumeBtn">Продолжить</button>
+        <button class="btn secondary" id="pauseMenuBtn">В меню</button>
+      </div>
     </div>
 
     <div id="overOverlay" class="overlayScreen" style="display:none;">
-      <h1 id="overTitle">Игра окончена</h1>
-      <p id="overStats"></p>
-      <button class="btn" id="retryBtn">Ещё раз</button>
-      <button class="btn secondary" id="overMenuBtn">В меню</button>
+      <div class="sheet">
+        <h1 id="overTitle">Игра окончена</h1>
+        <p id="overStats"></p>
+        <button class="btn" id="retryBtn">Ещё раз</button>
+        <button class="btn secondary" id="overMenuBtn">В меню</button>
+      </div>
+    </div>
+
+    <div id="easterEgg">
+      <div class="tux">🐧</div>
+      <p style="font-size:16px;font-weight:bold;">Powered by Linux — Tux одобряет!</p>
     </div>
   </div>
 </div>
@@ -123,19 +202,13 @@ const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const holder = document.getElementById('canvasHolder');
 
-const startOverlay = document.getElementById('startOverlay');
-const shopOverlay = document.getElementById('shopOverlay');
-const pauseOverlay = document.getElementById('pauseOverlay');
-const overOverlay = document.getElementById('overOverlay');
-
-const startBtn = document.getElementById('startBtn');
-const shopBtn = document.getElementById('shopBtn');
-const shopBackBtn = document.getElementById('shopBackBtn');
-const pauseBtn = document.getElementById('pauseBtn');
-const resumeBtn = document.getElementById('resumeBtn');
-const pauseMenuBtn = document.getElementById('pauseMenuBtn');
-const retryBtn = document.getElementById('retryBtn');
-const overMenuBtn = document.getElementById('overMenuBtn');
+const screens = {
+  start: document.getElementById('startOverlay'),
+  shop: document.getElementById('shopOverlay'),
+  settings: document.getElementById('settingsOverlay'),
+  pause: document.getElementById('pauseOverlay'),
+  over: document.getElementById('overOverlay'),
+};
 
 const scoreLbl = document.getElementById('scoreLbl');
 const bestLbl = document.getElementById('bestLbl');
@@ -145,15 +218,16 @@ const shopCoinLbl = document.getElementById('shopCoinLbl');
 const shopGrid = document.getElementById('shopGrid');
 const overTitle = document.getElementById('overTitle');
 const overStats = document.getElementById('overStats');
+const toast = document.getElementById('toast');
+const joyBase = document.getElementById('joyBase');
+const joyKnob = document.getElementById('joyKnob');
+const easterEgg = document.getElementById('easterEgg');
 
 let W, H, groundY;
 function resize(){
-  W = holder.clientWidth;
-  H = holder.clientHeight;
-  canvas.width = W * devicePixelRatio;
-  canvas.height = H * devicePixelRatio;
-  canvas.style.width = W+'px';
-  canvas.style.height = H+'px';
+  W = holder.clientWidth; H = holder.clientHeight;
+  canvas.width = W * devicePixelRatio; canvas.height = H * devicePixelRatio;
+  canvas.style.width = W+'px'; canvas.style.height = H+'px';
   ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
   groundY = H - 70;
 }
@@ -161,414 +235,288 @@ window.addEventListener('resize', resize);
 resize();
 
 // ---------- persistence ----------
-function loadNum(key, def){ try { const v = parseInt(localStorage.getItem(key)); return isNaN(v)?def:v; } catch(e){ return def; } }
-function saveNum(key, val){ try { localStorage.setItem(key, String(val)); } catch(e){} }
-function loadArr(key, def){ try { const v = JSON.parse(localStorage.getItem(key)); return Array.isArray(v)?v:def; } catch(e){ return def; } }
-function saveArr(key, val){ try { localStorage.setItem(key, JSON.stringify(val)); } catch(e){} }
+function loadNum(k,d){ try{ const v=parseInt(localStorage.getItem(k)); return isNaN(v)?d:v; }catch(e){ return d; } }
+function saveNum(k,v){ try{ localStorage.setItem(k,String(v)); }catch(e){} }
+function loadArr(k,d){ try{ const v=JSON.parse(localStorage.getItem(k)); return Array.isArray(v)?v:d; }catch(e){ return d; } }
+function saveArr(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }
+function loadBool(k,d){ try{ const v=localStorage.getItem(k); return v===null?d:v==='1'; }catch(e){ return d; } }
+function saveBool(k,v){ try{ localStorage.setItem(k, v?'1':'0'); }catch(e){} }
 
 let best = loadNum('rr_best', 0);
 let wallet = loadNum('rr_coins', 0);
 let ownedSkins = loadArr('rr_owned', ['default']);
 let currentSkin = localStorage.getItem('rr_skin') || 'default';
+let musicOn = loadBool('rr_music', true);
+let sfxOn = loadBool('rr_sfx', true);
+let joyMode = loadBool('rr_joy', false);
+let cheatsUnlocked = loadBool('rr_cheats_unlocked', false);
+let godMode = false;
+let lastMilestone = 0;
 
-bestLbl.textContent = 'Рекорд: ' + best;
+bestLbl.textContent = best;
 coinLbl.textContent = wallet;
 startCoinLbl.textContent = wallet;
 
+const SKIN_PRICE = 50;
 const SKINS = [
-  { id:'default', name:'Классик', price:0,
-    palette:{ body:'#2255aa', bodyLight:'#5aa0f0', skin:'#ffd9b3', accent:'#123a77' } },
-  { id:'tux', name:'Tux', price:100,
-    palette:{ body:'#1a1a1a', bodyLight:'#3a3a3a', skin:'#ffffff', accent:'#ff9900', isTux:true } },
-  { id:'redhat', name:'RedHat', price:150,
-    palette:{ body:'#2255aa', bodyLight:'#5aa0f0', skin:'#ffd9b3', accent:'#123a77', hat:'#cc0000' } },
-  { id:'arch', name:'ArchLinux', price:200,
-    palette:{ body:'#1793d1', bodyLight:'#66c2ee', skin:'#ffd9b3', accent:'#0f4d70', logo:true } },
+  { id:'default', name:'Классик', price:0, palette:{ body:'#2255aa', bodyLight:'#5aa0f0', skin:'#ffd9b3', accent:'#123a77' } },
+  { id:'tux', name:'Tux', price:SKIN_PRICE, palette:{ body:'#1a1a1a', bodyLight:'#3a3a3a', skin:'#ffffff', accent:'#ff9900', isTux:true } },
+  { id:'redhat', name:'RedHat', price:SKIN_PRICE, palette:{ body:'#2255aa', bodyLight:'#5aa0f0', skin:'#ffd9b3', accent:'#123a77', hat:'#cc0000' } },
+  { id:'arch', name:'ArchLinux', price:SKIN_PRICE, palette:{ body:'#1793d1', bodyLight:'#66c2ee', skin:'#ffd9b3', accent:'#0f4d70', logo:true } },
+  { id:'ubuntu', name:'Ubuntu', price:SKIN_PRICE, palette:{ body:'#2255aa', bodyLight:'#5aa0f0', skin:'#ffd9b3', accent:'#123a77', pants:'#dd4814' } },
 ];
-
 function skinById(id){ return SKINS.find(s=>s.id===id) || SKINS[0]; }
 
-// ---------- game state ----------
-let running = false;
-let paused = false;
-let score = 0;
-let runCoins = 0;
-let speed = 5;
-let frame = 0;
+// ---------- audio ----------
+let actx = null;
+function ensureAudio(){ if (!actx){ try{ actx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } }
+function beep(freq, dur, vol, type){
+  if (!sfxOn || !actx) return;
+  const o = actx.createOscillator(); const g = actx.createGain();
+  o.type = type||'square'; o.frequency.value = freq;
+  g.gain.value = vol||0.06;
+  o.connect(g); g.connect(actx.destination);
+  o.start();
+  g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime+dur);
+  o.stop(actx.currentTime+dur);
+}
+function sfxJump(){ beep(520,0.12,0.05,'square'); }
+function sfxCoin(){ beep(880,0.09,0.05,'triangle'); setTimeout(()=>beep(1200,0.08,0.04,'triangle'),40); }
+function sfxHit(){ beep(120,0.3,0.08,'sawtooth'); }
+function sfxMilestone(){ beep(660,0.1,0.05,'square'); setTimeout(()=>beep(990,0.15,0.05,'square'),100); }
 
-const player = { x:60, y:0, w:26, h:36, vy:0, jumping:false, legPhase:0 };
-let obstacles = [];
-let coins = [];
-let particles = [];
-let stars = [];
-for (let i=0;i<40;i++){
-  stars.push({ x:Math.random(), y:Math.random()*0.5, r:Math.random()*1.5+0.3, tw:Math.random()*Math.PI*2 });
+let musicTimer = null, musicStep = 0;
+const musicNotes = [261,329,392,329,440,392,329,261, 293,349,440,349,523,440,349,293];
+function startMusic(){
+  ensureAudio();
+  if (!actx || musicTimer) return;
+  musicTimer = setInterval(()=>{
+    if (!musicOn) return;
+    const freq = musicNotes[musicStep % musicNotes.length];
+    musicStep++;
+    const o = actx.createOscillator(); const g = actx.createGain();
+    o.type='triangle'; o.frequency.value=freq;
+    g.gain.value=0.025;
+    o.connect(g); g.connect(actx.destination);
+    o.start();
+    g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime+0.22);
+    o.stop(actx.currentTime+0.24);
+  }, 230);
 }
 
-const GRAVITY = 0.85;
-const JUMP_V = -15.5;
+// ---------- toast ----------
+let toastTimer=null;
+function showToast(msg){
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>toast.classList.remove('show'), 1800);
+}
+
+// ---------- game state ----------
+let running=false, paused=false;
+let score=0, runCoins=0, speed=5, frame=0;
+let obstacles=[], coins=[], particles=[], stars=[];
+for (let i=0;i<40;i++) stars.push({x:Math.random(), y:Math.random()*0.5, r:Math.random()*1.5+0.3, tw:Math.random()*Math.PI*2});
+
+const player = { x:60, y:0, w:26, h:36, vy:0, jumping:false, legPhase:0, flip:0, flipping:false };
+const GRAVITY = 0.85, JUMP_V = -15.5;
 
 function reset(){
-  score = 0;
-  runCoins = 0;
-  speed = 5.5;
-  frame = 0;
-  obstacles = [];
-  coins = [];
-  particles = [];
-  player.y = groundY - player.h;
-  player.vy = 0;
-  player.jumping = false;
-  nextObstacleAt = 60;
-  nextCoinAt = 90;
+  score=0; runCoins=0; speed=5.5; frame=0;
+  obstacles=[]; coins=[]; particles=[];
+  player.y = groundY - player.h; player.vy=0; player.jumping=false; player.flip=0; player.flipping=false;
+  nextObstacleAt=60; nextCoinAt=90; lastMilestone=0;
 }
 
 function jump(){
-  if (!running || paused) return;
-  if (!player.jumping){
-    player.vy = JUMP_V;
-    player.jumping = true;
+  if (!running||paused) return;
+  if (!player.jumping){ player.vy=JUMP_V; player.jumping=true; player.flipping=true; player.flip=0; sfxJump(); }
+}
+
+let nextObstacleAt=60, nextCoinAt=90;
+function spawnObstacle(){
+  const type = Math.random()<0.5?'block':'spike';
+  const h = type==='block' ? 30+Math.random()*20 : 24;
+  obstacles.push({ x:W+20, y:groundY-h, w:type==='block'?22:26, h, type });
+}
+function spawnCoin(){
+  const y = groundY - 60 - Math.random()*60;
+  coins.push({ x:W+20, y, r:8, collected:false, spin:0 });
+}
+
+function rectsOverlap(x1,y1,w1,h1,x2,y2,w2,h2){ return x1<x2+w2 && x1+w1>x2 && y1<y2+h2 && y1+h1>y2; }
+
+function checkMilestone(){
+  const m = Math.floor(score/1000);
+  if (m>lastMilestone){
+    lastMilestone=m;
+    wallet+=100; saveNum('rr_coins',wallet); coinLbl.textContent=wallet;
+    showToast('🎉 1000 очков! +100 монет');
+    sfxMilestone();
+    for (let k=0;k<16;k++) particles.push({x:W/2,y:H*0.3,vx:(Math.random()-0.5)*6,vy:(Math.random()-1.5)*5,life:30,color:'#ffd84a'});
   }
 }
 
-function spawnObstacle(){
-  const type = Math.random() < 0.5 ? 'block' : 'spike';
-  const h = type === 'block' ? 30 + Math.random()*20 : 24;
-  obstacles.push({ x: W + 20, y: groundY - h, w: type==='block'?22:26, h: h, type });
-}
-
-function spawnCoin(){
-  const y = groundY - 60 - Math.random()*60;
-  coins.push({ x: W + 20, y: y, r: 8, collected:false, spin:0 });
-}
-
-let nextObstacleAt = 60;
-let nextCoinAt = 90;
-
-function rectsOverlap(x1,y1,w1,h1,x2,y2,w2,h2){
-  return x1 < x2+w2 && x1+w1 > x2 && y1 < y2+h2 && y1+h1 > y2;
-}
-
 function update(){
-  frame++;
-  score += 1;
+  frame++; score+=1;
   speed = 5.5 + Math.min(6, score/500);
+  checkMilestone();
 
   player.vy += GRAVITY;
   player.y += player.vy;
   if (player.y > groundY - player.h){
-    player.y = groundY - player.h;
-    player.vy = 0;
-    if (player.jumping) player.jumping = false;
+    player.y = groundY - player.h; player.vy=0;
+    if (player.jumping){ player.jumping=false; player.flipping=false; player.flip=0; }
   }
+  if (player.flipping) player.flip += 0.09;
   if (!player.jumping) player.legPhase += 0.35;
 
-  if (frame > nextObstacleAt){
-    spawnObstacle();
-    nextObstacleAt = frame + 55 + Math.random()*45 - Math.min(30, score/60);
-  }
-  if (frame > nextCoinAt){
-    spawnCoin();
-    nextCoinAt = frame + 70 + Math.random()*60;
-  }
+  if (frame > nextObstacleAt){ spawnObstacle(); nextObstacleAt = frame+55+Math.random()*45-Math.min(30,score/60); }
+  if (frame > nextCoinAt){ spawnCoin(); nextCoinAt = frame+70+Math.random()*60; }
 
-  for (let i = obstacles.length-1; i>=0; i--){
-    const o = obstacles[i];
-    o.x -= speed;
-    if (o.x + o.w < -10) { obstacles.splice(i,1); continue; }
-    if (rectsOverlap(player.x+4, player.y+4, player.w-8, player.h-8, o.x, o.y, o.w, o.h)){
-      gameOver();
-      return;
-    }
+  for (let i=obstacles.length-1;i>=0;i--){
+    const o=obstacles[i]; o.x -= speed;
+    if (o.x+o.w<-10){ obstacles.splice(i,1); continue; }
+    if (!godMode && rectsOverlap(player.x+4,player.y+4,player.w-8,player.h-8, o.x,o.y,o.w,o.h)){ gameOver(); return; }
   }
-
-  for (let i = coins.length-1; i>=0; i--){
-    const c = coins[i];
-    c.x -= speed;
-    c.spin += 0.2;
-    if (c.x < -10) { coins.splice(i,1); continue; }
-    const dx = (player.x+player.w/2) - c.x;
-    const dy = (player.y+player.h/2) - c.y;
-    if (!c.collected && Math.sqrt(dx*dx+dy*dy) < 22){
-      c.collected = true;
-      score += 25;
-      runCoins += 1;
-      wallet += 1;
-      coinLbl.textContent = wallet;
-      saveNum('rr_coins', wallet);
-      for (let k=0;k<8;k++){
-        particles.push({x:c.x,y:c.y,vx:(Math.random()-0.5)*4,vy:(Math.random()-1)*4,life:22,color:'#ffd84a'});
-      }
+  for (let i=coins.length-1;i>=0;i--){
+    const c=coins[i]; c.x -= speed; c.spin += 0.2;
+    if (c.x<-10){ coins.splice(i,1); continue; }
+    const dx=(player.x+player.w/2)-c.x, dy=(player.y+player.h/2)-c.y;
+    if (!c.collected && Math.sqrt(dx*dx+dy*dy)<22){
+      c.collected=true; score+=25; runCoins+=1; wallet+=1;
+      coinLbl.textContent=wallet; saveNum('rr_coins',wallet); sfxCoin();
+      for (let k=0;k<8;k++) particles.push({x:c.x,y:c.y,vx:(Math.random()-0.5)*4,vy:(Math.random()-1)*4,life:22,color:'#ffd84a'});
       coins.splice(i,1);
     }
   }
+  for (let i=particles.length-1;i>=0;i--){ const p=particles[i]; p.x+=p.vx; p.y+=p.vy; p.vy+=0.2; p.life--; if (p.life<=0) particles.splice(i,1); }
 
-  for (let i=particles.length-1;i>=0;i--){
-    const p = particles[i];
-    p.x+=p.vx; p.y+=p.vy; p.vy+=0.2; p.life--;
-    if (p.life<=0) particles.splice(i,1);
-  }
-
-  scoreLbl.textContent = 'Очки: ' + score;
+  scoreLbl.textContent = score;
 }
 
 function gameOver(){
-  running = false;
-  if (score > best){
-    best = score;
-    saveNum('rr_best', best);
-  }
-  bestLbl.textContent = 'Рекорд: ' + best;
-  overTitle.textContent = 'Игра окончена';
-  overStats.innerHTML = 'Очки: ' + score + '<br>Монет за забег: 🪙' + runCoins + '<br>Рекорд: ' + best;
-  showScreen(overOverlay);
+  running=false; sfxHit();
+  if (score>best){ best=score; saveNum('rr_best',best); }
+  bestLbl.textContent = best;
+  overTitle.textContent='Игра окончена';
+  overStats.innerHTML='Очки: '+score+'<br>Монет за забег: 🪙'+runCoins+'<br>Рекорд: '+best;
+  showScreen('over');
 }
 
 // ---------- rendering ----------
 function drawBackground(){
   const sky = ctx.createLinearGradient(0,0,0,groundY);
-  sky.addColorStop(0, '#0a1440');
-  sky.addColorStop(0.45, '#2c4a8a');
-  sky.addColorStop(0.8, '#5f8fd0');
-  sky.addColorStop(1, '#9fc4ec');
-  ctx.fillStyle = sky;
-  ctx.fillRect(0,0,W,groundY);
+  sky.addColorStop(0,'#0a1440'); sky.addColorStop(0.45,'#2c4a8a'); sky.addColorStop(0.8,'#5f8fd0'); sky.addColorStop(1,'#9fc4ec');
+  ctx.fillStyle=sky; ctx.fillRect(0,0,W,groundY);
 
-  // glow sun
-  const sunX = W*0.78, sunY = groundY*0.28;
-  const glow = ctx.createRadialGradient(sunX,sunY,0,sunX,sunY,120);
-  glow.addColorStop(0,'rgba(255,240,200,0.9)');
-  glow.addColorStop(0.3,'rgba(255,220,150,0.35)');
-  glow.addColorStop(1,'rgba(255,220,150,0)');
-  ctx.fillStyle = glow;
-  ctx.fillRect(sunX-120,sunY-120,240,240);
-  ctx.fillStyle = '#fff6dd';
-  ctx.beginPath();
-  ctx.arc(sunX,sunY,18,0,Math.PI*2);
-  ctx.fill();
+  const sunX=W*0.78, sunY=groundY*0.28;
+  const glow=ctx.createRadialGradient(sunX,sunY,0,sunX,sunY,120);
+  glow.addColorStop(0,'rgba(255,240,200,0.9)'); glow.addColorStop(0.3,'rgba(255,220,150,0.35)'); glow.addColorStop(1,'rgba(255,220,150,0)');
+  ctx.fillStyle=glow; ctx.fillRect(sunX-120,sunY-120,240,240);
+  ctx.fillStyle='#fff6dd'; ctx.beginPath(); ctx.arc(sunX,sunY,18,0,Math.PI*2); ctx.fill();
 
-  // stars twinkle (top area only, subtle over gradient)
   for (const s of stars){
-    const a = 0.15 + 0.15*Math.sin(frame*0.03 + s.tw);
-    ctx.fillStyle = `rgba(255,255,255,${Math.max(0,a)})`;
-    ctx.beginPath();
-    ctx.arc(s.x*W, s.y*groundY, s.r, 0, Math.PI*2);
-    ctx.fill();
+    const a=0.15+0.15*Math.sin(frame*0.03+s.tw);
+    ctx.fillStyle=`rgba(255,255,255,${Math.max(0,a)})`;
+    ctx.beginPath(); ctx.arc(s.x*W, s.y*groundY, s.r,0,Math.PI*2); ctx.fill();
   }
-
-  // parallax mountains
   drawMountains(0.15, groundY-10, '#1e3766', 60);
   drawMountains(0.3, groundY, '#274a86', 90);
 }
-
 function drawMountains(parallax, baseY, color, height){
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.moveTo(0, baseY);
-  const off = (frame*speed*parallax) % 160;
-  for (let x=-off; x<W+160; x+=160){
-    ctx.lineTo(x+80, baseY-height);
-    ctx.lineTo(x+160, baseY);
-  }
-  ctx.lineTo(W, baseY);
-  ctx.lineTo(0, baseY);
-  ctx.closePath();
-  ctx.fill();
+  ctx.fillStyle=color; ctx.beginPath(); ctx.moveTo(0,baseY);
+  const off=(frame*speed*parallax)%160;
+  for (let x=-off;x<W+160;x+=160){ ctx.lineTo(x+80,baseY-height); ctx.lineTo(x+160,baseY); }
+  ctx.lineTo(W,baseY); ctx.lineTo(0,baseY); ctx.closePath(); ctx.fill();
 }
-
 function drawGround(){
-  const g = ctx.createLinearGradient(0, groundY, 0, H);
-  g.addColorStop(0, '#3d7a4a');
-  g.addColorStop(1, '#1e3d24');
-  ctx.fillStyle = g;
-  ctx.fillRect(0, groundY, W, H-groundY);
-
-  ctx.fillStyle = 'rgba(255,255,255,0.12)';
-  ctx.fillRect(0, groundY, W, 3);
-
-  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-  const off = (frame*speed) % 24;
-  for (let x = -off; x < W; x += 24){
-    ctx.beginPath();
-    ctx.moveTo(x, groundY+10);
-    ctx.lineTo(x+12, groundY+10);
-    ctx.stroke();
-  }
+  const g = ctx.createLinearGradient(0,groundY,0,H);
+  g.addColorStop(0,'#3d7a4a'); g.addColorStop(1,'#1e3d24');
+  ctx.fillStyle=g; ctx.fillRect(0,groundY,W,H-groundY);
+  ctx.fillStyle='rgba(255,255,255,0.12)'; ctx.fillRect(0,groundY,W,3);
+  ctx.strokeStyle='rgba(255,255,255,0.1)';
+  const off=(frame*speed)%24;
+  for (let x=-off;x<W;x+=24){ ctx.beginPath(); ctx.moveTo(x,groundY+10); ctx.lineTo(x+12,groundY+10); ctx.stroke(); }
 }
 
 function drawPlayer(){
-  const px = player.x, py = player.y, pw = player.w, ph = player.h;
+  const px=player.x, py=player.y, pw=player.w, ph=player.h;
   const skin = skinById(currentSkin).palette;
   ctx.save();
-  ctx.translate(px, py);
-
-  // soft blurred shadow
-  ctx.save();
-  ctx.filter = 'blur(3px)';
-  ctx.fillStyle = 'rgba(0,0,0,0.35)';
-  ctx.beginPath();
-  ctx.ellipse(pw/2, groundY-py+3, pw/2, 4, 0, 0, Math.PI*2);
-  ctx.fill();
+  ctx.filter='blur(3px)'; ctx.fillStyle='rgba(0,0,0,0.35)';
+  ctx.beginPath(); ctx.ellipse(px+pw/2, groundY+3, pw/2, 4, 0,0,Math.PI*2); ctx.fill();
   ctx.restore();
 
+  ctx.save();
+  ctx.translate(px+pw/2, py+ph/2);
+  if (player.flipping) ctx.rotate(player.flip*Math.PI*2);
+  ctx.translate(-pw/2,-ph/2);
+
   const legSwing = player.jumping ? 0.4 : Math.sin(player.legPhase)*0.6;
-
-  // legs
-  ctx.strokeStyle = skin.accent;
-  ctx.lineWidth = 4;
-  ctx.lineCap = 'round';
+  ctx.strokeStyle = skin.pants || skin.accent; ctx.lineWidth=4; ctx.lineCap='round';
   ctx.beginPath();
-  ctx.moveTo(pw/2-4, ph-14);
-  ctx.lineTo(pw/2-4+legSwing*8, ph);
-  ctx.moveTo(pw/2+4, ph-14);
-  ctx.lineTo(pw/2+4-legSwing*8, ph);
+  ctx.moveTo(pw/2-4, ph-14); ctx.lineTo(pw/2-4+legSwing*8, ph);
+  ctx.moveTo(pw/2+4, ph-14); ctx.lineTo(pw/2+4-legSwing*8, ph);
   ctx.stroke();
 
-  // body with gradient (rim light effect)
   const bodyGrad = ctx.createLinearGradient(0,10,pw,ph-14);
-  bodyGrad.addColorStop(0, skin.bodyLight);
-  bodyGrad.addColorStop(0.5, skin.body);
-  bodyGrad.addColorStop(1, skin.accent);
-  ctx.fillStyle = bodyGrad;
-  ctx.beginPath();
-  ctx.roundRect(4, 10, pw-8, ph-24, 6);
-  ctx.fill();
+  bodyGrad.addColorStop(0,skin.bodyLight); bodyGrad.addColorStop(0.5,skin.body); bodyGrad.addColorStop(1,skin.accent);
+  ctx.fillStyle=bodyGrad;
+  ctx.beginPath(); ctx.roundRect(4,10,pw-8,ph-24,6); ctx.fill();
 
-  // Arch logo patch
-  if (skin.logo){
-    ctx.fillStyle = 'rgba(255,255,255,0.85)';
-    ctx.beginPath();
-    ctx.moveTo(pw/2, 14);
-    ctx.lineTo(pw/2-4, 22);
-    ctx.lineTo(pw/2+4, 22);
-    ctx.closePath();
-    ctx.fill();
-  }
-  // Tux white belly
-  if (skin.isTux){
-    ctx.fillStyle = skin.skin;
-    ctx.beginPath();
-    ctx.ellipse(pw/2, ph/2-2, pw/2-8, ph/2-14, 0, 0, Math.PI*2);
-    ctx.fill();
-  }
+  if (skin.logo){ ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.beginPath(); ctx.moveTo(pw/2,14); ctx.lineTo(pw/2-4,22); ctx.lineTo(pw/2+4,22); ctx.closePath(); ctx.fill(); }
+  if (skin.isTux){ ctx.fillStyle=skin.skin; ctx.beginPath(); ctx.ellipse(pw/2,ph/2-2,pw/2-8,ph/2-14,0,0,Math.PI*2); ctx.fill(); }
 
-  // highlight rim
-  ctx.strokeStyle = 'rgba(255,255,255,0.35)';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.roundRect(4, 10, pw-8, ph-24, 6);
-  ctx.stroke();
+  ctx.strokeStyle='rgba(255,255,255,0.35)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.roundRect(4,10,pw-8,ph-24,6); ctx.stroke();
 
-  // arms
-  ctx.strokeStyle = skin.body;
-  ctx.lineWidth = 4;
-  ctx.beginPath();
-  ctx.moveTo(4, 16);
-  ctx.lineTo(-2 - legSwing*4, 26);
-  ctx.moveTo(pw-4, 16);
-  ctx.lineTo(pw+2 + legSwing*4, 26);
-  ctx.stroke();
+  ctx.strokeStyle=skin.body; ctx.lineWidth=4;
+  ctx.beginPath(); ctx.moveTo(4,16); ctx.lineTo(-2-legSwing*4,26); ctx.moveTo(pw-4,16); ctx.lineTo(pw+2+legSwing*4,26); ctx.stroke();
 
-  // head
   ctx.fillStyle = skin.isTux ? '#1a1a1a' : skin.skin;
-  ctx.beginPath();
-  ctx.arc(pw/2, 6, 9, 0, Math.PI*2);
-  ctx.fill();
+  ctx.beginPath(); ctx.arc(pw/2,6,9,0,Math.PI*2); ctx.fill();
   if (skin.isTux){
-    // white face patch
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.ellipse(pw/2, 8, 5, 6, 0, 0, Math.PI*2);
-    ctx.fill();
-    ctx.fillStyle = skin.accent;
-    ctx.beginPath();
-    ctx.moveTo(pw/2, 9);
-    ctx.lineTo(pw/2+5, 10);
-    ctx.lineTo(pw/2, 11);
-    ctx.closePath();
-    ctx.fill();
+    ctx.fillStyle='#fff'; ctx.beginPath(); ctx.ellipse(pw/2,8,5,6,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=skin.accent; ctx.beginPath(); ctx.moveTo(pw/2,9); ctx.lineTo(pw/2+5,10); ctx.lineTo(pw/2,11); ctx.closePath(); ctx.fill();
   }
-
-  // RedHat fedora
   if (skin.hat){
-    ctx.fillStyle = skin.hat;
-    ctx.beginPath();
-    ctx.roundRect(pw/2-8, -6, 16, 6, 2);
-    ctx.fill();
-    ctx.fillRect(pw/2-11, -1, 22, 3);
-    ctx.fillStyle = '#800000';
-    ctx.fillRect(pw/2-8, 1, 16, 2);
+    ctx.fillStyle=skin.hat; ctx.beginPath(); ctx.roundRect(pw/2-8,-6,16,6,2); ctx.fill();
+    ctx.fillRect(pw/2-11,-1,22,3); ctx.fillStyle='#800000'; ctx.fillRect(pw/2-8,1,16,2);
   }
-
-  // face dot
-  if (!skin.isTux){
-    ctx.fillStyle = skin.accent;
-    ctx.beginPath();
-    ctx.arc(pw/2+3, 5, 1.5, 0, Math.PI*2);
-    ctx.fill();
-  }
-
+  if (!skin.isTux){ ctx.fillStyle=skin.accent; ctx.beginPath(); ctx.arc(pw/2+3,5,1.5,0,Math.PI*2); ctx.fill(); }
   ctx.restore();
 }
 
 function drawObstacle(o){
-  ctx.save();
-  ctx.filter = 'blur(2px)';
-  ctx.fillStyle = 'rgba(0,0,0,0.3)';
-  ctx.beginPath();
-  ctx.ellipse(o.x+o.w/2, groundY+3, o.w/2, 4, 0, 0, Math.PI*2);
-  ctx.fill();
-  ctx.restore();
+  ctx.save(); ctx.filter='blur(2px)'; ctx.fillStyle='rgba(0,0,0,0.3)';
+  ctx.beginPath(); ctx.ellipse(o.x+o.w/2, groundY+3, o.w/2, 4, 0,0,Math.PI*2); ctx.fill(); ctx.restore();
 
-  if (o.type === 'block'){
-    const g = ctx.createLinearGradient(o.x,o.y,o.x,o.y+o.h);
-    g.addColorStop(0, '#b98456');
-    g.addColorStop(1, '#6b4229');
-    ctx.fillStyle = g;
-    ctx.fillRect(o.x, o.y, o.w, o.h);
-    ctx.fillStyle = 'rgba(255,255,255,0.25)';
-    ctx.fillRect(o.x, o.y, o.w, 3);
+  if (o.type==='block'){
+    const g=ctx.createLinearGradient(o.x,o.y,o.x,o.y+o.h);
+    g.addColorStop(0,'#b98456'); g.addColorStop(1,'#6b4229');
+    ctx.fillStyle=g; ctx.fillRect(o.x,o.y,o.w,o.h);
+    ctx.fillStyle='rgba(255,255,255,0.25)'; ctx.fillRect(o.x,o.y,o.w,3);
   } else {
-    const g = ctx.createLinearGradient(o.x,o.y,o.x,o.y+o.h);
-    g.addColorStop(0, '#ff6a5a');
-    g.addColorStop(1, '#8a1e1e');
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.moveTo(o.x, o.y+o.h);
-    ctx.lineTo(o.x+o.w/2, o.y);
-    ctx.lineTo(o.x+o.w, o.y+o.h);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-    ctx.stroke();
+    const g=ctx.createLinearGradient(o.x,o.y,o.x,o.y+o.h);
+    g.addColorStop(0,'#ff6a5a'); g.addColorStop(1,'#8a1e1e');
+    ctx.fillStyle=g;
+    ctx.beginPath(); ctx.moveTo(o.x,o.y+o.h); ctx.lineTo(o.x+o.w/2,o.y); ctx.lineTo(o.x+o.w,o.y+o.h); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.3)'; ctx.stroke();
   }
 }
-
 function drawCoin(c){
-  ctx.save();
-  ctx.translate(c.x, c.y);
-  const sx = Math.abs(Math.cos(c.spin));
-  ctx.scale(Math.max(0.15,sx), 1);
-
-  const glow = ctx.createRadialGradient(0,0,0,0,0,c.r*2.2);
-  glow.addColorStop(0,'rgba(255,216,74,0.55)');
-  glow.addColorStop(1,'rgba(255,216,74,0)');
-  ctx.fillStyle = glow;
-  ctx.beginPath();
-  ctx.arc(0,0,c.r*2.2,0,Math.PI*2);
-  ctx.fill();
-
-  const g = ctx.createRadialGradient(-c.r*0.3,-c.r*0.3,1,0,0,c.r);
-  g.addColorStop(0,'#fff6c8');
-  g.addColorStop(0.5,'#ffd84a');
-  g.addColorStop(1,'#c98f0f');
-  ctx.fillStyle = g;
-  ctx.beginPath();
-  ctx.arc(0,0,c.r,0,Math.PI*2);
-  ctx.fill();
-  ctx.strokeStyle = '#8a5f08';
-  ctx.lineWidth = 1.2;
-  ctx.stroke();
+  ctx.save(); ctx.translate(c.x,c.y);
+  const sx=Math.abs(Math.cos(c.spin));
+  ctx.scale(Math.max(0.15,sx),1);
+  const glow=ctx.createRadialGradient(0,0,0,0,0,c.r*2.2);
+  glow.addColorStop(0,'rgba(255,216,74,0.55)'); glow.addColorStop(1,'rgba(255,216,74,0)');
+  ctx.fillStyle=glow; ctx.beginPath(); ctx.arc(0,0,c.r*2.2,0,Math.PI*2); ctx.fill();
+  const g=ctx.createRadialGradient(-c.r*0.3,-c.r*0.3,1,0,0,c.r);
+  g.addColorStop(0,'#fff6c8'); g.addColorStop(0.5,'#ffd84a'); g.addColorStop(1,'#c98f0f');
+  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(0,0,c.r,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#8a5f08'; ctx.lineWidth=1.2; ctx.stroke();
   ctx.restore();
 }
 
@@ -578,212 +526,157 @@ function draw(){
   drawGround();
   for (const o of obstacles) drawObstacle(o);
   for (const c of coins) drawCoin(c);
-  for (const p of particles){
-    ctx.fillStyle = p.color;
-    ctx.globalAlpha = Math.max(0,p.life/22);
-    ctx.fillRect(p.x,p.y,3,3);
-    ctx.globalAlpha = 1;
-  }
+  for (const p of particles){ ctx.fillStyle=p.color; ctx.globalAlpha=Math.max(0,p.life/22); ctx.fillRect(p.x,p.y,3,3); ctx.globalAlpha=1; }
   drawPlayer();
-
-  // vignette
-  const vg = ctx.createRadialGradient(W/2,H/2,H*0.4,W/2,H/2,H*0.9);
-  vg.addColorStop(0,'rgba(0,0,0,0)');
-  vg.addColorStop(1,'rgba(0,0,0,0.35)');
-  ctx.fillStyle = vg;
-  ctx.fillRect(0,0,W,H);
+  const vg=ctx.createRadialGradient(W/2,H/2,H*0.4,W/2,H/2,H*0.9);
+  vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(0,0,0,0.35)');
+  ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
 }
 
 function loop(){
-  if (running && !paused){
-    update();
-    draw();
-  } else if (running && paused) {
-    draw();
-  }
+  if (running && !paused){ update(); draw(); }
   requestAnimationFrame(loop);
 }
 
 // ---------- screens ----------
-function hideAllScreens(){
-  startOverlay.style.display = 'none';
-  shopOverlay.style.display = 'none';
-  pauseOverlay.style.display = 'none';
-  overOverlay.style.display = 'none';
-}
-function showScreen(el){
-  hideAllScreens();
-  el.style.display = 'flex';
-}
+function hideAll(){ Object.values(screens).forEach(el=>el.style.display='none'); }
+function showScreen(name){ hideAll(); screens[name].style.display='flex'; }
 
 function buildShop(){
-  shopGrid.innerHTML = '';
-  shopCoinLbl.textContent = wallet;
+  shopGrid.innerHTML=''; shopCoinLbl.textContent=wallet;
   for (const s of SKINS){
     const owned = ownedSkins.includes(s.id);
-    const selected = currentSkin === s.id;
-    const card = document.createElement('div');
-    card.className = 'skinCard' + (selected ? ' selected' : '');
-
-    const prevCanvas = document.createElement('canvas');
-    prevCanvas.width = 60; prevCanvas.height = 76;
+    const selected = currentSkin===s.id;
+    const card=document.createElement('div');
+    card.className='skinCard'+(selected?' selected':'');
+    const prevCanvas=document.createElement('canvas');
+    prevCanvas.width=60; prevCanvas.height=76;
     drawSkinPreview(prevCanvas, s);
-
-    const name = document.createElement('div');
-    name.className = 'skinName';
-    name.textContent = s.name;
-
-    const priceOrBtn = document.createElement('div');
+    const name=document.createElement('div'); name.className='skinName'; name.textContent=s.name;
+    const priceOrBtn=document.createElement('div');
     if (owned){
-      const btn = document.createElement('button');
-      btn.className = 'btn small' + (selected ? '' : ' secondary');
-      btn.textContent = selected ? 'Выбрано' : 'Выбрать';
-      btn.disabled = selected;
-      btn.onclick = () => {
-        currentSkin = s.id;
-        localStorage.setItem('rr_skin', currentSkin);
-        buildShop();
-      };
+      const btn=document.createElement('button');
+      btn.className='btn small'+(selected?'':' secondary');
+      btn.textContent=selected?'Выбрано':'Выбрать';
+      btn.disabled=selected;
+      btn.onclick=()=>{ currentSkin=s.id; localStorage.setItem('rr_skin',currentSkin); buildShop(); };
       priceOrBtn.appendChild(btn);
     } else {
-      const btn = document.createElement('button');
-      btn.className = 'btn small';
-      btn.textContent = '🪙 ' + s.price;
-      btn.disabled = wallet < s.price;
-      btn.onclick = () => {
-        if (wallet >= s.price){
-          wallet -= s.price;
-          ownedSkins.push(s.id);
-          saveNum('rr_coins', wallet);
-          saveArr('rr_owned', ownedSkins);
-          currentSkin = s.id;
-          localStorage.setItem('rr_skin', currentSkin);
-          coinLbl.textContent = wallet;
-          startCoinLbl.textContent = wallet;
+      const btn=document.createElement('button');
+      btn.className='btn small'; btn.textContent='🪙 '+s.price;
+      btn.disabled = wallet<s.price;
+      btn.onclick=()=>{
+        if (wallet>=s.price){
+          wallet-=s.price; ownedSkins.push(s.id);
+          saveNum('rr_coins',wallet); saveArr('rr_owned',ownedSkins);
+          currentSkin=s.id; localStorage.setItem('rr_skin',currentSkin);
+          coinLbl.textContent=wallet; startCoinLbl.textContent=wallet;
           buildShop();
         }
       };
       priceOrBtn.appendChild(btn);
     }
-
-    card.appendChild(prevCanvas);
-    card.appendChild(name);
-    card.appendChild(priceOrBtn);
+    card.appendChild(prevCanvas); card.appendChild(name); card.appendChild(priceOrBtn);
     shopGrid.appendChild(card);
   }
 }
-
 function drawSkinPreview(cv, skinDef){
-  const pctx = cv.getContext('2d');
-  const skin = skinDef.palette;
-  pctx.clearRect(0,0,cv.width,cv.height);
-  pctx.save();
-  pctx.translate(cv.width/2-13, 6);
+  const p=cv.getContext('2d'); const skin=skinDef.palette;
+  p.clearRect(0,0,cv.width,cv.height); p.save(); p.translate(cv.width/2-13,6);
   const pw=26, ph=36;
-
-  pctx.strokeStyle = skin.accent;
-  pctx.lineWidth = 4;
-  pctx.lineCap='round';
-  pctx.beginPath();
-  pctx.moveTo(pw/2-4, ph-14); pctx.lineTo(pw/2-4, ph);
-  pctx.moveTo(pw/2+4, ph-14); pctx.lineTo(pw/2+4, ph);
-  pctx.stroke();
-
-  const bodyGrad = pctx.createLinearGradient(0,10,pw,ph-14);
-  bodyGrad.addColorStop(0, skin.bodyLight);
-  bodyGrad.addColorStop(1, skin.accent);
-  pctx.fillStyle = bodyGrad;
-  pctx.beginPath();
-  pctx.roundRect(4, 10, pw-8, ph-24, 6);
-  pctx.fill();
-
-  if (skin.logo){
-    pctx.fillStyle='rgba(255,255,255,0.85)';
-    pctx.beginPath();
-    pctx.moveTo(pw/2,14); pctx.lineTo(pw/2-4,22); pctx.lineTo(pw/2+4,22);
-    pctx.closePath(); pctx.fill();
-  }
-  if (skin.isTux){
-    pctx.fillStyle = skin.skin;
-    pctx.beginPath();
-    pctx.ellipse(pw/2, ph/2-2, pw/2-8, ph/2-14, 0,0,Math.PI*2);
-    pctx.fill();
-  }
-
-  pctx.fillStyle = skin.isTux ? '#1a1a1a' : skin.skin;
-  pctx.beginPath();
-  pctx.arc(pw/2, 6, 9, 0, Math.PI*2);
-  pctx.fill();
-  if (skin.isTux){
-    pctx.fillStyle = '#fff';
-    pctx.beginPath();
-    pctx.ellipse(pw/2, 8, 5, 6, 0, 0, Math.PI*2);
-    pctx.fill();
-    pctx.fillStyle = skin.accent;
-    pctx.beginPath();
-    pctx.moveTo(pw/2,9); pctx.lineTo(pw/2+5,10); pctx.lineTo(pw/2,11);
-    pctx.closePath(); pctx.fill();
-  }
-  if (skin.hat){
-    pctx.fillStyle = skin.hat;
-    pctx.beginPath();
-    pctx.roundRect(pw/2-8,-6,16,6,2);
-    pctx.fill();
-    pctx.fillRect(pw/2-11,-1,22,3);
-  }
-  pctx.restore();
+  p.strokeStyle=skin.pants||skin.accent; p.lineWidth=4; p.lineCap='round';
+  p.beginPath(); p.moveTo(pw/2-4,ph-14); p.lineTo(pw/2-4,ph); p.moveTo(pw/2+4,ph-14); p.lineTo(pw/2+4,ph); p.stroke();
+  const bg=p.createLinearGradient(0,10,pw,ph-14); bg.addColorStop(0,skin.bodyLight); bg.addColorStop(1,skin.accent);
+  p.fillStyle=bg; p.beginPath(); p.roundRect(4,10,pw-8,ph-24,6); p.fill();
+  if (skin.logo){ p.fillStyle='rgba(255,255,255,0.85)'; p.beginPath(); p.moveTo(pw/2,14); p.lineTo(pw/2-4,22); p.lineTo(pw/2+4,22); p.closePath(); p.fill(); }
+  if (skin.isTux){ p.fillStyle=skin.skin; p.beginPath(); p.ellipse(pw/2,ph/2-2,pw/2-8,ph/2-14,0,0,Math.PI*2); p.fill(); }
+  p.fillStyle = skin.isTux?'#1a1a1a':skin.skin;
+  p.beginPath(); p.arc(pw/2,6,9,0,Math.PI*2); p.fill();
+  if (skin.isTux){ p.fillStyle='#fff'; p.beginPath(); p.ellipse(pw/2,8,5,6,0,0,Math.PI*2); p.fill();
+    p.fillStyle=skin.accent; p.beginPath(); p.moveTo(pw/2,9); p.lineTo(pw/2+5,10); p.lineTo(pw/2,11); p.closePath(); p.fill(); }
+  if (skin.hat){ p.fillStyle=skin.hat; p.beginPath(); p.roundRect(pw/2-8,-6,16,6,2); p.fill(); p.fillRect(pw/2-11,-1,22,3); }
+  p.restore();
 }
 
+// ---------- settings ----------
+const musicToggle=document.getElementById('musicToggle');
+const sfxToggle=document.getElementById('sfxToggle');
+const joyToggle=document.getElementById('joyToggle');
+function refreshToggles(){
+  musicToggle.classList.toggle('on', musicOn);
+  sfxToggle.classList.toggle('on', sfxOn);
+  joyToggle.classList.toggle('on', joyMode);
+}
+refreshToggles();
+musicToggle.onclick=()=>{ musicOn=!musicOn; saveBool('rr_music',musicOn); refreshToggles(); if (musicOn) startMusic(); };
+sfxToggle.onclick=()=>{ sfxOn=!sfxOn; saveBool('rr_sfx',sfxOn); refreshToggles(); };
+joyToggle.onclick=()=>{ joyMode=!joyMode; saveBool('rr_joy',joyMode); refreshToggles(); if (running && !paused) joyBase.style.display = joyMode?'block':'none'; };
+
+let versionTapCount=0;
+document.getElementById('versionTapSettings').addEventListener('click', ()=>{
+  versionTapCount++;
+  if (versionTapCount>=7){
+    cheatsUnlocked=true; saveBool('rr_cheats_unlocked',true);
+    document.getElementById('cheatBox').style.display='block';
+    showToast('🔓 Читы разблокированы!');
+  }
+});
+if (cheatsUnlocked) document.getElementById('cheatBox').style.display='block';
+
+document.getElementById('cheatMoney').onclick=()=>{ wallet+=1000; saveNum('rr_coins',wallet); coinLbl.textContent=wallet; startCoinLbl.textContent=wallet; showToast('💰 +1000 монет'); };
+document.getElementById('cheatGod').onclick=()=>{ godMode=!godMode; document.getElementById('godState').textContent=godMode?'вкл':'выкл'; showToast(godMode?'🛡 Бессмертие включено':'Бессмертие выключено'); };
+document.getElementById('cheatLinux').onclick=()=>triggerLinuxEasterEgg();
+
+function triggerLinuxEasterEgg(){
+  easterEgg.style.display='flex';
+  if (!ownedSkins.includes('tux')){ ownedSkins.push('tux'); saveArr('rr_owned',ownedSkins); showToast('🐧 Tux разблокирован бесплатно!'); }
+  setTimeout(()=>{ easterEgg.style.display='none'; }, 2500);
+}
+let typedBuffer='';
+document.addEventListener('keydown',(e)=>{
+  if (e.key.length===1){ typedBuffer=(typedBuffer+e.key).slice(-5).toLowerCase(); if (typedBuffer==='linux') triggerLinuxEasterEgg(); }
+  if (e.code==='Space'||e.code==='ArrowUp') jump();
+  if (e.code==='KeyP') document.getElementById('pauseBtn').click();
+});
+
 // ---------- events ----------
-startBtn.addEventListener('click', () => {
-  hideAllScreens();
-  reset();
-  running = true;
-  paused = false;
-});
-
-shopBtn.addEventListener('click', () => {
-  buildShop();
-  showScreen(shopOverlay);
-});
-shopBackBtn.addEventListener('click', () => {
-  startCoinLbl.textContent = wallet;
-  showScreen(startOverlay);
-});
-
-pauseBtn.addEventListener('click', () => {
+document.getElementById('startBtn').onclick=()=>{
+  ensureAudio(); if (musicOn) startMusic();
+  hideAll(); joyBase.style.display = joyMode?'block':'none';
+  reset(); running=true; paused=false;
+};
+document.getElementById('shopBtn').onclick=()=>{ buildShop(); hideAll(); screens.shop.style.display='flex'; };
+document.getElementById('shopBackBtn').onclick=()=>{ startCoinLbl.textContent=wallet; hideAll(); screens.start.style.display='flex'; };
+document.getElementById('settingsBtn').onclick=()=>{ hideAll(); screens.settings.style.display='flex'; };
+document.getElementById('settingsBtn2').onclick=()=>{ hideAll(); screens.settings.style.display='flex'; };
+document.getElementById('settingsBackBtn').onclick=()=>{
+  hideAll();
+  if (running){ if (paused) screens.pause.style.display='flex'; }
+  else { screens.start.style.display='flex'; startCoinLbl.textContent=wallet; }
+};
+document.getElementById('pauseBtn').onclick=()=>{
   if (!running) return;
-  paused = !paused;
-  if (paused){ showScreen(pauseOverlay); }
-  else { hideAllScreens(); }
-});
-resumeBtn.addEventListener('click', () => {
-  paused = false;
-  hideAllScreens();
-});
-pauseMenuBtn.addEventListener('click', () => {
-  running = false;
-  paused = false;
-  startCoinLbl.textContent = wallet;
-  showScreen(startOverlay);
-});
+  paused=!paused;
+  if (paused){ hideAll(); screens.pause.style.display='flex'; joyBase.style.display='none'; }
+  else { hideAll(); joyBase.style.display = joyMode?'block':'none'; }
+};
+document.getElementById('resumeBtn').onclick=()=>{ paused=false; hideAll(); joyBase.style.display=joyMode?'block':'none'; };
+document.getElementById('pauseMenuBtn').onclick=()=>{ running=false; paused=false; joyBase.style.display='none'; startCoinLbl.textContent=wallet; hideAll(); screens.start.style.display='flex'; };
+document.getElementById('retryBtn').onclick=()=>{ hideAll(); joyBase.style.display=joyMode?'block':'none'; reset(); running=true; paused=false; };
+document.getElementById('overMenuBtn').onclick=()=>{ joyBase.style.display='none'; startCoinLbl.textContent=wallet; hideAll(); screens.start.style.display='flex'; };
 
-retryBtn.addEventListener('click', () => {
-  hideAllScreens();
-  reset();
-  running = true;
-  paused = false;
-});
-overMenuBtn.addEventListener('click', () => {
-  startCoinLbl.textContent = wallet;
-  showScreen(startOverlay);
-});
+canvas.addEventListener('pointerdown',(e)=>{ e.preventDefault(); jump(); });
 
-canvas.addEventListener('pointerdown', (e) => { e.preventDefault(); jump(); });
-document.addEventListener('keydown', (e) => {
-  if (e.code === 'Space' || e.code === 'ArrowUp') jump();
-  if (e.code === 'KeyP') pauseBtn.click();
+let joyActive=false, joyStartY=0;
+joyBase.addEventListener('pointerdown',(e)=>{ joyActive=true; joyStartY=e.clientY; });
+window.addEventListener('pointermove',(e)=>{
+  if (!joyActive) return;
+  let dy=e.clientY-joyStartY;
+  const max=30; dy=Math.max(-max,Math.min(max,dy));
+  joyKnob.style.top=(26+dy)+'px';
+  if (dy<-22) jump();
 });
+window.addEventListener('pointerup',()=>{ joyActive=false; joyKnob.style.top='26px'; });
 
 draw();
 requestAnimationFrame(loop);
