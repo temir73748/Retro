@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Retro Runner</title>
+<link rel="manifest" href="manifest.json">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; user-select:none; }
+  html, body { height:100%; overflow:hidden; background:#050810; font-family: 'Segoe UI', Tahoma, Arial, sans-serif; }
+  #wrap {
+    width:100%; height:100%;
+    display:flex; flex-direction:column;
+    background:#050810;
+  }
+  #topbar {
+    height:46px; flex-shrink:0;
+    background: linear-gradient(180deg, #1c2a4a 0%, #0a1530 100%);
+    border-bottom: 2px solid #000814;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 10px; color:#eaf2ff; font-size:13px; font-weight:bold;
+    text-shadow: 1px 1px 1px rgba(0,0,0,0.6);
+    gap:8px;
+  }
+  #topbar .stats { display:flex; gap:12px; align-items:center; }
+  #topbar .coinTag { display:flex; align-items:center; gap:4px; color:#ffd84a; }
+  #pauseBtn {
+    width:32px; height:32px; border-radius:8px;
+    background: linear-gradient(180deg, #3a5aa0 0%, #1a2f66 100%);
+    border: 1px solid #000814; color:#fff; font-size:16px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  #canvasHolder { flex:1; position:relative; overflow:hidden; }
+  canvas { display:block; width:100%; height:100%; }
+  .overlayScreen {
+    position:absolute; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    background: radial-gradient(ellipse at 50% 30%, rgba(30,50,100,0.85), rgba(4,8,18,0.95));
+    color:#fff; text-align:center; padding:20px; overflow-y:auto;
+  }
+  .overlayScreen h1 { font-size:26px; margin-bottom:8px; text-shadow:0 0 12px #4fa3ff, 2px 2px 0 #000814; letter-spacing:1px; }
+  .overlayScreen p { font-size:13px; margin-bottom:14px; opacity:0.85; line-height:1.5; max-width:280px; }
+  .btn {
+    background: linear-gradient(180deg, #6ab4ff 0%, #1a56b8 100%);
+    border: 2px solid #001030;
+    border-radius: 10px;
+    color:#fff; font-size:15px; font-weight:bold;
+    padding:10px 26px;
+    box-shadow: 0 4px 0 #001030, inset 0 1px 0 rgba(255,255,255,0.5);
+    margin:5px;
+  }
+  .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #001030; }
+  .btn.secondary {
+    background: linear-gradient(180deg, #444d66 0%, #1c2333 100%);
+  }
+  .btn.small { font-size:12px; padding:7px 14px; border-radius:8px; }
+  .btn:disabled { opacity:0.4; }
+  #hidden { display:none; }
+  .coinBadge { color:#ffd84a; font-weight:bold; }
+
+  #shopGrid {
+    display:grid; grid-template-columns: repeat(2, 1fr); gap:10px;
+    max-width:340px; width:100%; margin-bottom:14px;
+  }
+  .skinCard {
+    background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+    border: 2px solid #2a3a5c; border-radius:12px; padding:10px 6px;
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+  }
+  .skinCard.selected { border-color:#6ab4ff; box-shadow:0 0 12px rgba(106,180,255,0.6); }
+  .skinCard canvas { width:50px; height:64px; }
+  .skinCard .skinName { font-size:11px; font-weight:bold; }
+  .skinCard .skinPrice { font-size:11px; color:#ffd84a; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="topbar">
+    <div class="stats">
+      <span id="scoreLbl">Очки: 0</span>
+      <span class="coinTag">🪙<span id="coinLbl">0</span></span>
+    </div>
+    <div class="stats">
+      <span id="bestLbl">Рекорд: 0</span>
+      <button id="pauseBtn">❚❚</button>
+    </div>
+  </div>
+  <div id="canvasHolder">
+    <canvas id="game"></canvas>
+
+    <div id="startOverlay" class="overlayScreen">
+      <h1>RETRO RUNNER</h1>
+      <p>Человечек бежит сам.<br>Тапни по экрану, чтобы прыгнуть.<br>Собирай монетки — покупай скины в магазине.</p>
+      <p class="coinBadge">🪙 Монет: <span id="startCoinLbl">0</span></p>
+      <button class="btn" id="startBtn">Старт</button>
+      <button class="btn secondary" id="shopBtn">Магазин скинов</button>
+    </div>
+
+    <div id="shopOverlay" class="overlayScreen" style="display:none;">
+      <h1>Магазин</h1>
+      <p class="coinBadge">🪙 Монет: <span id="shopCoinLbl">0</span></p>
+      <div id="shopGrid"></div>
+      <button class="btn secondary" id="shopBackBtn">Назад</button>
+    </div>
+
+    <div id="pauseOverlay" class="overlayScreen" style="display:none;">
+      <h1>Пауза</h1>
+      <button class="btn" id="resumeBtn">Продолжить</button>
+      <button class="btn secondary" id="pauseMenuBtn">В меню</button>
+    </div>
+
+    <div id="overOverlay" class="overlayScreen" style="display:none;">
+      <h1 id="overTitle">Игра окончена</h1>
+      <p id="overStats"></p>
+      <button class="btn" id="retryBtn">Ещё раз</button>
+      <button class="btn secondary" id="overMenuBtn">В меню</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const holder = document.getElementById('canvasHolder');
+
+const startOverlay = document.getElementById('startOverlay');
+const shopOverlay = document.getElementById('shopOverlay');
+const pauseOverlay = document.getElementById('pauseOverlay');
+const overOverlay = document.getElementById('overOverlay');
+
+const startBtn = document.getElementById('startBtn');
+const shopBtn = document.getElementById('shopBtn');
+const shopBackBtn = document.getElementById('shopBackBtn');
+const pauseBtn = document.getElementById('pauseBtn');
+const resumeBtn = document.getElementById('resumeBtn');
+const pauseMenuBtn = document.getElementById('pauseMenuBtn');
+const retryBtn = document.getElementById('retryBtn');
+const overMenuBtn = document.getElementById('overMenuBtn');
+
+const scoreLbl = document.getElementById('scoreLbl');
+const bestLbl = document.getElementById('bestLbl');
+const coinLbl = document.getElementById('coinLbl');
+const startCoinLbl = document.getElementById('startCoinLbl');
+const shopCoinLbl = document.getElementById('shopCoinLbl');
+const shopGrid = document.getElementById('shopGrid');
+const overTitle = document.getElementById('overTitle');
+const overStats = document.getElementById('overStats');
+
+let W, H, groundY;
+function resize(){
+  W = holder.clientWidth;
+  H = holder.clientHeight;
+  canvas.width = W * devicePixelRatio;
+  canvas.height = H * devicePixelRatio;
+  canvas.style.width = W+'px';
+  canvas.style.height = H+'px';
+  ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+  groundY = H - 70;
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ---------- persistence ----------
+function loadNum(key, def){ try { const v = parseInt(localStorage.getItem(key)); return isNaN(v)?def:v; } catch(e){ return def; } }
+function saveNum(key, val){ try { localStorage.setItem(key, String(val)); } catch(e){} }
+function loadArr(key, def){ try { const v = JSON.parse(localStorage.getItem(key)); return Array.isArray(v)?v:def; } catch(e){ return def; } }
+function saveArr(key, val){ try { localStorage.setItem(key, JSON.stringify(val)); } catch(e){} }
+
+let best = loadNum('rr_best', 0);
+let wallet = loadNum('rr_coins', 0);
+let ownedSkins = loadArr('rr_owned', ['default']);
+let currentSkin = localStorage.getItem('rr_skin') || 'default';
+
+bestLbl.textContent = 'Рекорд: ' + best;
+coinLbl.textContent = wallet;
+startCoinLbl.textContent = wallet;
+
+const SKINS = [
+  { id:'default', name:'Классик', price:0,
+    palette:{ body:'#2255aa', bodyLight:'#5aa0f0', skin:'#ffd9b3', accent:'#123a77' } },
+  { id:'tux', name:'Tux', price:100,
+    palette:{ body:'#1a1a1a', bodyLight:'#3a3a3a', skin:'#ffffff', accent:'#ff9900', isTux:true } },
+  { id:'redhat', name:'RedHat', price:150,
+    palette:{ body:'#2255aa', bodyLight:'#5aa0f0', skin:'#ffd9b3', accent:'#123a77', hat:'#cc0000' } },
+  { id:'arch', name:'ArchLinux', price:200,
+    palette:{ body:'#1793d1', bodyLight:'#66c2ee', skin:'#ffd9b3', accent:'#0f4d70', logo:true } },
+];
+
+function skinById(id){ return SKINS.find(s=>s.id===id) || SKINS[0]; }
+
+// ---------- game state ----------
+let running = false;
+let paused = false;
+let score = 0;
+let runCoins = 0;
+let speed = 5;
+let frame = 0;
+
+const player = { x:60, y:0, w:26, h:36, vy:0, jumping:false, legPhase:0 };
+let obstacles = [];
+let coins = [];
+let particles = [];
+let stars = [];
+for (let i=0;i<40;i++){
+  stars.push({ x:Math.random(), y:Math.random()*0.5, r:Math.random()*1.5+0.3, tw:Math.random()*Math.PI*2 });
+}
+
+const GRAVITY = 0.85;
+const JUMP_V = -15.5;
+
+function reset(){
+  score = 0;
+  runCoins = 0;
+  speed = 5.5;
+  frame = 0;
+  obstacles = [];
+  coins = [];
+  particles = [];
+  player.y = groundY - player.h;
+  player.vy = 0;
+  player.jumping = false;
+  nextObstacleAt = 60;
+  nextCoinAt = 90;
+}
+
+function jump(){
+  if (!running || paused) return;
+  if (!player.jumping){
+    player.vy = JUMP_V;
+    player.jumping = true;
+  }
+}
+
+function spawnObstacle(){
+  const type = Math.random() < 0.5 ? 'block' : 'spike';
+  const h = type === 'block' ? 30 + Math.random()*20 : 24;
+  obstacles.push({ x: W + 20, y: groundY - h, w: type==='block'?22:26, h: h, type });
+}
+
+function spawnCoin(){
+  const y = groundY - 60 - Math.random()*60;
+  coins.push({ x: W + 20, y: y, r: 8, collected:false, spin:0 });
+}
+
+let nextObstacleAt = 60;
+let nextCoinAt = 90;
+
+function rectsOverlap(x1,y1,w1,h1,x2,y2,w2,h2){
+  return x1 < x2+w2 && x1+w1 > x2 && y1 < y2+h2 && y1+h1 > y2;
+}
+
+function update(){
+  frame++;
+  score += 1;
+  speed = 5.5 + Math.min(6, score/500);
+
+  player.vy += GRAVITY;
+  player.y += player.vy;
+  if (player.y > groundY - player.h){
+    player.y = groundY - player.h;
+    player.vy = 0;
+    if (player.jumping) player.jumping = false;
+  }
+  if (!player.jumping) player.legPhase += 0.35;
+
+  if (frame > nextObstacleAt){
+    spawnObstacle();
+    nextObstacleAt = frame + 55 + Math.random()*45 - Math.min(30, score/60);
+  }
+  if (frame > nextCoinAt){
+    spawnCoin();
+    nextCoinAt = frame + 70 + Math.random()*60;
+  }
+
+  for (let i = obstacles.length-1; i>=0; i--){
+    const o = obstacles[i];
+    o.x -= speed;
+    if (o.x + o.w < -10) { obstacles.splice(i,1); continue; }
+    if (rectsOverlap(player.x+4, player.y+4, player.w-8, player.h-8, o.x, o.y, o.w, o.h)){
+      gameOver();
+      return;
+    }
+  }
+
+  for (let i = coins.length-1; i>=0; i--){
+    const c = coins[i];
+    c.x -= speed;
+    c.spin += 0.2;
+    if (c.x < -10) { coins.splice(i,1); continue; }
+    const dx = (player.x+player.w/2) - c.x;
+    const dy = (player.y+player.h/2) - c.y;
+    if (!c.collected && Math.sqrt(dx*dx+dy*dy) < 22){
+      c.collected = true;
+      score += 25;
+      runCoins += 1;
+      wallet += 1;
+      coinLbl.textContent = wallet;
+      saveNum('rr_coins', wallet);
+      for (let k=0;k<8;k++){
+        particles.push({x:c.x,y:c.y,vx:(Math.random()-0.5)*4,vy:(Math.random()-1)*4,life:22,color:'#ffd84a'});
+      }
+      coins.splice(i,1);
+    }
+  }
+
+  for (let i=particles.length-1;i>=0;i--){
+    const p = particles[i];
+    p.x+=p.vx; p.y+=p.vy; p.vy+=0.2; p.life--;
+    if (p.life<=0) particles.splice(i,1);
+  }
+
+  scoreLbl.textContent = 'Очки: ' + score;
+}
+
+function gameOver(){
+  running = false;
+  if (score > best){
+    best = score;
+    saveNum('rr_best', best);
+  }
+  bestLbl.textContent = 'Рекорд: ' + best;
+  overTitle.textContent = 'Игра окончена';
+  overStats.innerHTML = 'Очки: ' + score + '<br>Монет за забег: 🪙' + runCoins + '<br>Рекорд: ' + best;
+  showScreen(overOverlay);
+}
+
+// ---------- rendering ----------
+function drawBackground(){
+  const sky = ctx.createLinearGradient(0,0,0,groundY);
+  sky.addColorStop(0, '#0a1440');
+  sky.addColorStop(0.45, '#2c4a8a');
+  sky.addColorStop(0.8, '#5f8fd0');
+  sky.addColorStop(1, '#9fc4ec');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0,0,W,groundY);
+
+  // glow sun
+  const sunX = W*0.78, sunY = groundY*0.28;
+  const glow = ctx.createRadialGradient(sunX,sunY,0,sunX,sunY,120);
+  glow.addColorStop(0,'rgba(255,240,200,0.9)');
+  glow.addColorStop(0.3,'rgba(255,220,150,0.35)');
+  glow.addColorStop(1,'rgba(255,220,150,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(sunX-120,sunY-120,240,240);
+  ctx.fillStyle = '#fff6dd';
+  ctx.beginPath();
+  ctx.arc(sunX,sunY,18,0,Math.PI*2);
+  ctx.fill();
+
+  // stars twinkle (top area only, subtle over gradient)
+  for (const s of stars){
+    const a = 0.15 + 0.15*Math.sin(frame*0.03 + s.tw);
+    ctx.fillStyle = `rgba(255,255,255,${Math.max(0,a)})`;
+    ctx.beginPath();
+    ctx.arc(s.x*W, s.y*groundY, s.r, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // parallax mountains
+  drawMountains(0.15, groundY-10, '#1e3766', 60);
+  drawMountains(0.3, groundY, '#274a86', 90);
+}
+
+function drawMountains(parallax, baseY, color, height){
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(0, baseY);
+  const off = (frame*speed*parallax) % 160;
+  for (let x=-off; x<W+160; x+=160){
+    ctx.lineTo(x+80, baseY-height);
+    ctx.lineTo(x+160, baseY);
+  }
+  ctx.lineTo(W, baseY);
+  ctx.lineTo(0, baseY);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawGround(){
+  const g = ctx.createLinearGradient(0, groundY, 0, H);
+  g.addColorStop(0, '#3d7a4a');
+  g.addColorStop(1, '#1e3d24');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, groundY, W, H-groundY);
+
+  ctx.fillStyle = 'rgba(255,255,255,0.12)';
+  ctx.fillRect(0, groundY, W, 3);
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+  const off = (frame*speed) % 24;
+  for (let x = -off; x < W; x += 24){
+    ctx.beginPath();
+    ctx.moveTo(x, groundY+10);
+    ctx.lineTo(x+12, groundY+10);
+    ctx.stroke();
+  }
+}
+
+function drawPlayer(){
+  const px = player.x, py = player.y, pw = player.w, ph = player.h;
+  const skin = skinById(currentSkin).palette;
+  ctx.save();
+  ctx.translate(px, py);
+
+  // soft blurred shadow
+  ctx.save();
+  ctx.filter = 'blur(3px)';
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.beginPath();
+  ctx.ellipse(pw/2, groundY-py+3, pw/2, 4, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+
+  const legSwing = player.jumping ? 0.4 : Math.sin(player.legPhase)*0.6;
+
+  // legs
+  ctx.strokeStyle = skin.accent;
+  ctx.lineWidth = 4;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(pw/2-4, ph-14);
+  ctx.lineTo(pw/2-4+legSwing*8, ph);
+  ctx.moveTo(pw/2+4, ph-14);
+  ctx.lineTo(pw/2+4-legSwing*8, ph);
+  ctx.stroke();
+
+  // body with gradient (rim light effect)
+  const bodyGrad = ctx.createLinearGradient(0,10,pw,ph-14);
+  bodyGrad.addColorStop(0, skin.bodyLight);
+  bodyGrad.addColorStop(0.5, skin.body);
+  bodyGrad.addColorStop(1, skin.accent);
+  ctx.fillStyle = bodyGrad;
+  ctx.beginPath();
+  ctx.roundRect(4, 10, pw-8, ph-24, 6);
+  ctx.fill();
+
+  // Arch logo patch
+  if (skin.logo){
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.beginPath();
+    ctx.moveTo(pw/2, 14);
+    ctx.lineTo(pw/2-4, 22);
+    ctx.lineTo(pw/2+4, 22);
+    ctx.closePath();
+    ctx.fill();
+  }
+  // Tux white belly
+  if (skin.isTux){
+    ctx.fillStyle = skin.skin;
+    ctx.beginPath();
+    ctx.ellipse(pw/2, ph/2-2, pw/2-8, ph/2-14, 0, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // highlight rim
+  ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.roundRect(4, 10, pw-8, ph-24, 6);
+  ctx.stroke();
+
+  // arms
+  ctx.strokeStyle = skin.body;
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(4, 16);
+  ctx.lineTo(-2 - legSwing*4, 26);
+  ctx.moveTo(pw-4, 16);
+  ctx.lineTo(pw+2 + legSwing*4, 26);
+  ctx.stroke();
+
+  // head
+  ctx.fillStyle = skin.isTux ? '#1a1a1a' : skin.skin;
+  ctx.beginPath();
+  ctx.arc(pw/2, 6, 9, 0, Math.PI*2);
+  ctx.fill();
+  if (skin.isTux){
+    // white face patch
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.ellipse(pw/2, 8, 5, 6, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle = skin.accent;
+    ctx.beginPath();
+    ctx.moveTo(pw/2, 9);
+    ctx.lineTo(pw/2+5, 10);
+    ctx.lineTo(pw/2, 11);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // RedHat fedora
+  if (skin.hat){
+    ctx.fillStyle = skin.hat;
+    ctx.beginPath();
+    ctx.roundRect(pw/2-8, -6, 16, 6, 2);
+    ctx.fill();
+    ctx.fillRect(pw/2-11, -1, 22, 3);
+    ctx.fillStyle = '#800000';
+    ctx.fillRect(pw/2-8, 1, 16, 2);
+  }
+
+  // face dot
+  if (!skin.isTux){
+    ctx.fillStyle = skin.accent;
+    ctx.beginPath();
+    ctx.arc(pw/2+3, 5, 1.5, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+function drawObstacle(o){
+  ctx.save();
+  ctx.filter = 'blur(2px)';
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.beginPath();
+  ctx.ellipse(o.x+o.w/2, groundY+3, o.w/2, 4, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+
+  if (o.type === 'block'){
+    const g = ctx.createLinearGradient(o.x,o.y,o.x,o.y+o.h);
+    g.addColorStop(0, '#b98456');
+    g.addColorStop(1, '#6b4229');
+    ctx.fillStyle = g;
+    ctx.fillRect(o.x, o.y, o.w, o.h);
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.fillRect(o.x, o.y, o.w, 3);
+  } else {
+    const g = ctx.createLinearGradient(o.x,o.y,o.x,o.y+o.h);
+    g.addColorStop(0, '#ff6a5a');
+    g.addColorStop(1, '#8a1e1e');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(o.x, o.y+o.h);
+    ctx.lineTo(o.x+o.w/2, o.y);
+    ctx.lineTo(o.x+o.w, o.y+o.h);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.stroke();
+  }
+}
+
+function drawCoin(c){
+  ctx.save();
+  ctx.translate(c.x, c.y);
+  const sx = Math.abs(Math.cos(c.spin));
+  ctx.scale(Math.max(0.15,sx), 1);
+
+  const glow = ctx.createRadialGradient(0,0,0,0,0,c.r*2.2);
+  glow.addColorStop(0,'rgba(255,216,74,0.55)');
+  glow.addColorStop(1,'rgba(255,216,74,0)');
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.arc(0,0,c.r*2.2,0,Math.PI*2);
+  ctx.fill();
+
+  const g = ctx.createRadialGradient(-c.r*0.3,-c.r*0.3,1,0,0,c.r);
+  g.addColorStop(0,'#fff6c8');
+  g.addColorStop(0.5,'#ffd84a');
+  g.addColorStop(1,'#c98f0f');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(0,0,c.r,0,Math.PI*2);
+  ctx.fill();
+  ctx.strokeStyle = '#8a5f08';
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+  ctx.restore();
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  drawBackground();
+  drawGround();
+  for (const o of obstacles) drawObstacle(o);
+  for (const c of coins) drawCoin(c);
+  for (const p of particles){
+    ctx.fillStyle = p.color;
+    ctx.globalAlpha = Math.max(0,p.life/22);
+    ctx.fillRect(p.x,p.y,3,3);
+    ctx.globalAlpha = 1;
+  }
+  drawPlayer();
+
+  // vignette
+  const vg = ctx.createRadialGradient(W/2,H/2,H*0.4,W/2,H/2,H*0.9);
+  vg.addColorStop(0,'rgba(0,0,0,0)');
+  vg.addColorStop(1,'rgba(0,0,0,0.35)');
+  ctx.fillStyle = vg;
+  ctx.fillRect(0,0,W,H);
+}
+
+function loop(){
+  if (running && !paused){
+    update();
+    draw();
+  } else if (running && paused) {
+    draw();
+  }
+  requestAnimationFrame(loop);
+}
+
+// ---------- screens ----------
+function hideAllScreens(){
+  startOverlay.style.display = 'none';
+  shopOverlay.style.display = 'none';
+  pauseOverlay.style.display = 'none';
+  overOverlay.style.display = 'none';
+}
+function showScreen(el){
+  hideAllScreens();
+  el.style.display = 'flex';
+}
+
+function buildShop(){
+  shopGrid.innerHTML = '';
+  shopCoinLbl.textContent = wallet;
+  for (const s of SKINS){
+    const owned = ownedSkins.includes(s.id);
+    const selected = currentSkin === s.id;
+    const card = document.createElement('div');
+    card.className = 'skinCard' + (selected ? ' selected' : '');
+
+    const prevCanvas = document.createElement('canvas');
+    prevCanvas.width = 60; prevCanvas.height = 76;
+    drawSkinPreview(prevCanvas, s);
+
+    const name = document.createElement('div');
+    name.className = 'skinName';
+    name.textContent = s.name;
+
+    const priceOrBtn = document.createElement('div');
+    if (owned){
+      const btn = document.createElement('button');
+      btn.className = 'btn small' + (selected ? '' : ' secondary');
+      btn.textContent = selected ? 'Выбрано' : 'Выбрать';
+      btn.disabled = selected;
+      btn.onclick = () => {
+        currentSkin = s.id;
+        localStorage.setItem('rr_skin', currentSkin);
+        buildShop();
+      };
+      priceOrBtn.appendChild(btn);
+    } else {
+      const btn = document.createElement('button');
+      btn.className = 'btn small';
+      btn.textContent = '🪙 ' + s.price;
+      btn.disabled = wallet < s.price;
+      btn.onclick = () => {
+        if (wallet >= s.price){
+          wallet -= s.price;
+          ownedSkins.push(s.id);
+          saveNum('rr_coins', wallet);
+          saveArr('rr_owned', ownedSkins);
+          currentSkin = s.id;
+          localStorage.setItem('rr_skin', currentSkin);
+          coinLbl.textContent = wallet;
+          startCoinLbl.textContent = wallet;
+          buildShop();
+        }
+      };
+      priceOrBtn.appendChild(btn);
+    }
+
+    card.appendChild(prevCanvas);
+    card.appendChild(name);
+    card.appendChild(priceOrBtn);
+    shopGrid.appendChild(card);
+  }
+}
+
+function drawSkinPreview(cv, skinDef){
+  const pctx = cv.getContext('2d');
+  const skin = skinDef.palette;
+  pctx.clearRect(0,0,cv.width,cv.height);
+  pctx.save();
+  pctx.translate(cv.width/2-13, 6);
+  const pw=26, ph=36;
+
+  pctx.strokeStyle = skin.accent;
+  pctx.lineWidth = 4;
+  pctx.lineCap='round';
+  pctx.beginPath();
+  pctx.moveTo(pw/2-4, ph-14); pctx.lineTo(pw/2-4, ph);
+  pctx.moveTo(pw/2+4, ph-14); pctx.lineTo(pw/2+4, ph);
+  pctx.stroke();
+
+  const bodyGrad = pctx.createLinearGradient(0,10,pw,ph-14);
+  bodyGrad.addColorStop(0, skin.bodyLight);
+  bodyGrad.addColorStop(1, skin.accent);
+  pctx.fillStyle = bodyGrad;
+  pctx.beginPath();
+  pctx.roundRect(4, 10, pw-8, ph-24, 6);
+  pctx.fill();
+
+  if (skin.logo){
+    pctx.fillStyle='rgba(255,255,255,0.85)';
+    pctx.beginPath();
+    pctx.moveTo(pw/2,14); pctx.lineTo(pw/2-4,22); pctx.lineTo(pw/2+4,22);
+    pctx.closePath(); pctx.fill();
+  }
+  if (skin.isTux){
+    pctx.fillStyle = skin.skin;
+    pctx.beginPath();
+    pctx.ellipse(pw/2, ph/2-2, pw/2-8, ph/2-14, 0,0,Math.PI*2);
+    pctx.fill();
+  }
+
+  pctx.fillStyle = skin.isTux ? '#1a1a1a' : skin.skin;
+  pctx.beginPath();
+  pctx.arc(pw/2, 6, 9, 0, Math.PI*2);
+  pctx.fill();
+  if (skin.isTux){
+    pctx.fillStyle = '#fff';
+    pctx.beginPath();
+    pctx.ellipse(pw/2, 8, 5, 6, 0, 0, Math.PI*2);
+    pctx.fill();
+    pctx.fillStyle = skin.accent;
+    pctx.beginPath();
+    pctx.moveTo(pw/2,9); pctx.lineTo(pw/2+5,10); pctx.lineTo(pw/2,11);
+    pctx.closePath(); pctx.fill();
+  }
+  if (skin.hat){
+    pctx.fillStyle = skin.hat;
+    pctx.beginPath();
+    pctx.roundRect(pw/2-8,-6,16,6,2);
+    pctx.fill();
+    pctx.fillRect(pw/2-11,-1,22,3);
+  }
+  pctx.restore();
+}
+
+// ---------- events ----------
+startBtn.addEventListener('click', () => {
+  hideAllScreens();
+  reset();
+  running = true;
+  paused = false;
+});
+
+shopBtn.addEventListener('click', () => {
+  buildShop();
+  showScreen(shopOverlay);
+});
+shopBackBtn.addEventListener('click', () => {
+  startCoinLbl.textContent = wallet;
+  showScreen(startOverlay);
+});
+
+pauseBtn.addEventListener('click', () => {
+  if (!running) return;
+  paused = !paused;
+  if (paused){ showScreen(pauseOverlay); }
+  else { hideAllScreens(); }
+});
+resumeBtn.addEventListener('click', () => {
+  paused = false;
+  hideAllScreens();
+});
+pauseMenuBtn.addEventListener('click', () => {
+  running = false;
+  paused = false;
+  startCoinLbl.textContent = wallet;
+  showScreen(startOverlay);
+});
+
+retryBtn.addEventListener('click', () => {
+  hideAllScreens();
+  reset();
+  running = true;
+  paused = false;
+});
+overMenuBtn.addEventListener('click', () => {
+  startCoinLbl.textContent = wallet;
+  showScreen(startOverlay);
+});
+
+canvas.addEventListener('pointerdown', (e) => { e.preventDefault(); jump(); });
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'Space' || e.code === 'ArrowUp') jump();
+  if (e.code === 'KeyP') pauseBtn.click();
+});
+
+draw();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
